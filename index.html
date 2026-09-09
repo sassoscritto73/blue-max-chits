@@ -49,7 +49,7 @@
     .empty { color: #68737e; text-align: center; padding: 24px 8px; }
     .flip { animation: flip-in 340ms ease-out both; }
     @keyframes flip-in { 0% { transform: perspective(500px) rotateX(-88deg); filter: brightness(.7); opacity: .55; } 60% { transform: perspective(500px) rotateX(8deg); } 100% { transform: perspective(500px) rotateX(0); filter: brightness(1); opacity: 1; } }
-    @media (max-width: 420px) { .damage-selectors { grid-template-columns: 1fr; gap: 12px; } }
+    @media (max-width: 360px) { .damage-selectors { grid-template-columns: 1fr; gap: 12px; } }
     @media (max-width: 340px) { .actions { grid-template-columns: 1fr; } }
     @media (prefers-reduced-motion: reduce) { .flip { animation: none; } .result { transition: none; } }
     @media (max-width: 390px) { main { padding: 16px 12px 28px; } h1 { font-size: 25px; } }
