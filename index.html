@@ -26,7 +26,7 @@
     .step-button.red { background: #ed1c2e; }
     .step-button.blue { background: #1769aa; }
     .actions { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 12px; margin-top: 16px; }
-    .actions button { min-height: 54px; height: 54px; margin: 0; padding: 10px 12px; }
+    .actions button { display: flex; align-items: center; justify-content: center; min-height: 54px; height: 54px; margin: 0; padding: 10px 12px; text-align: center; line-height: 1; }
     .draw-button { background: #20b653; }
     .reset-button { background: #59636e; }
     .status { margin-top: 12px; color: #4d5965; text-align: center; min-height: 22px; }
@@ -85,7 +85,7 @@
       </div>
       <div class="actions">
         <button id="draw" class="draw-button" type="button">Estrai</button>
-        <button id="reset" class="reset-button" type="button">Nuovo turno</button>
+        <button id="reset" class="reset-button" type="button">Reset</button>
       </div>
       <div id="status" class="status"></div>
     </section>
@@ -110,10 +110,17 @@
     function currentChits() { return sets[selectedSet].chits; }
     function drawRandom(array, count) {
       const copy = [...array];
-      for (let i = copy.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [copy[i], copy[j]] = [copy[j], copy[i]]; }
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
       return copy.slice(0, count);
     }
-    function escapeHTML(value) { return String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character])); }
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[character]));
+    }
     function readCount(inputId) { return Math.max(0, Math.min(36, Number.parseInt($(inputId).value, 10) || 0)); }
     function setCount(inputId, value) { $(inputId).value = value <= 0 ? '' : String(Math.max(0, Math.min(36, value))); }
     function changeCount(inputId, delta) { setCount(inputId, readCount(inputId) + delta); }
@@ -126,28 +133,70 @@
     }
     function showResults() {
       const container = $('results');
-      if (!results.length) { container.innerHTML = '<div class="panel empty">Nessuna tessera estratta.</div>'; return; }
-      const red = results.map((result,index) => ({result,index})).filter(item => item.result.side === 'red');
-      const blue = results.map((result,index) => ({result,index})).filter(item => item.result.side === 'blue');
-      container.innerHTML = `${red.length ? `<div class="group"><h3 class="group-title">RED</h3>${red.map(item => card(item.result,item.index)).join('')}</div>` : ''}${blue.length ? `<div class="group"><h3 class="group-title">BLUE</h3>${blue.map(item => card(item.result,item.index)).join('')}</div>` : ''}`;
+      if (!results.length) {
+        container.innerHTML = '<div class="panel empty">Nessuna tessera estratta.</div>';
+        return;
+      }
+      const red = results.map((result, index) => ({ result, index })).filter(item => item.result.side === 'red');
+      const blue = results.map((result, index) => ({ result, index })).filter(item => item.result.side === 'blue');
+      container.innerHTML = `${red.length ? `<div class="group"><h3 class="group-title">RED</h3>${red.map(item => card(item.result, item.index)).join('')}</div>` : ''}${blue.length ? `<div class="group"><h3 class="group-title">BLUE</h3>${blue.map(item => card(item.result, item.index)).join('')}</div>` : ''}`;
     }
     function message(text, warning = false) { $('status').innerHTML = warning ? `<div class="warning">${escapeHTML(text)}</div>` : escapeHTML(text); }
-    function resetBag() { available = new Set(currentChits().map(chit => chit[0])); results = []; setCount('blueCount',0); setCount('redCount',0); showResults(); }
+    function resetBag() {
+      available = new Set(currentChits().map(chit => chit[0]));
+      results = [];
+      setCount('blueCount', 0);
+      setCount('redCount', 0);
+      showResults();
+    }
 
-    document.querySelectorAll('.step-button').forEach(button => button.addEventListener('click', () => changeCount(button.dataset.target, Number(button.dataset.delta))));
-    ['redCount','blueCount'].forEach(inputId => $(inputId).addEventListener('change', () => setCount(inputId, readCount(inputId))));
-    $('results').addEventListener('click', event => { const cardElement = event.target.closest('.result.hidden'); if (!cardElement) return; const index = Number(cardElement.dataset.index); results[index].revealed = true; cardElement.classList.remove('hidden'); cardElement.classList.add('flip'); cardElement.setAttribute('aria-label', `Tessera ${results[index].id} ${results[index].side.toUpperCase()}`); });
-    $('setSelect').addEventListener('change', () => { if (results.length && !window.confirm('Cambiare set cancella le estrazioni del turno. Continuare?')) { $('setSelect').value = selectedSet; return; } selectedSet = $('setSelect').value; resetBag(); message(''); });
+    document.querySelectorAll('.step-button').forEach(button => {
+      button.addEventListener('click', () => changeCount(button.dataset.target, Number(button.dataset.delta)));
+    });
+    ['redCount', 'blueCount'].forEach(inputId => {
+      $(inputId).addEventListener('change', () => setCount(inputId, readCount(inputId)));
+    });
+    $('results').addEventListener('click', event => {
+      const cardElement = event.target.closest('.result.hidden');
+      if (!cardElement) return;
+      const index = Number(cardElement.dataset.index);
+      results[index].revealed = true;
+      cardElement.classList.remove('hidden');
+      cardElement.classList.add('flip');
+      cardElement.setAttribute('aria-label', `Tessera ${results[index].id} ${results[index].side.toUpperCase()}`);
+    });
+    $('setSelect').addEventListener('change', () => {
+      if (results.length && !window.confirm('Cambiare set cancella le estrazioni del turno. Continuare?')) {
+        $('setSelect').value = selectedSet;
+        return;
+      }
+      selectedSet = $('setSelect').value;
+      resetBag();
+      message('');
+    });
     $('draw').addEventListener('click', () => {
-      const blueCount = readCount('blueCount'); const redCount = readCount('redCount'); const total = blueCount + redCount;
+      const blueCount = readCount('blueCount');
+      const redCount = readCount('redCount');
+      const total = blueCount + redCount;
       if (total === 0) return message('Inserisci almeno una tessera da estrarre.', true);
       if (total > 36) return message(`Non puoi estrarre ${total} tessere: il set contiene soltanto 36 tessere.`, true);
-      if (total > available.size) return message(`Non puoi estrarre ${total} tessere: in questo turno ne restano soltanto ${available.size}. Nuovo turno per reimbussolare.`, true);
-      const ids = drawRandom([...available], total); const chits = currentChits(); const redIDs = ids.slice(0, redCount); const blueIDs = ids.slice(redCount);
-      results.push(...redIDs.map(id => ({id,side:'red',value:chits[id-1][2],revealed:false})), ...blueIDs.map(id => ({id,side:'blue',value:chits[id-1][1],revealed:false})));
-      ids.forEach(id => available.delete(id)); message(`${total} tessere estratte dal set ${sets[selectedSet].name}. Tocca ciascuna tessera per scoprirla.`); showResults();
+      if (total > available.size) return message(`Non puoi estrarre ${total} tessere: in questo turno ne restano soltanto ${available.size}. Reset per reimbussolare.`, true);
+      const ids = drawRandom([...available], total);
+      const chits = currentChits();
+      const redIDs = ids.slice(0, redCount);
+      const blueIDs = ids.slice(redCount);
+      results.push(
+        ...redIDs.map(id => ({ id, side: 'red', value: chits[id - 1][2], revealed: false })),
+        ...blueIDs.map(id => ({ id, side: 'blue', value: chits[id - 1][1], revealed: false }))
+      );
+      ids.forEach(id => available.delete(id));
+      message(`${total} tessere estratte dal set ${sets[selectedSet].name}. Tocca ciascuna tessera per scoprirla.`);
+      showResults();
     });
-    $('reset').addEventListener('click', () => { resetBag(); message(`Tutte le 36 tessere del set ${sets[selectedSet].name} sono state reimbussolate.`); });
+    $('reset').addEventListener('click', () => {
+      resetBag();
+      message(`Tutte le 36 tessere del set ${sets[selectedSet].name} sono state reimbussolate.`);
+    });
   </script>
 </body>
 </html>
