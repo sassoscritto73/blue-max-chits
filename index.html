@@ -140,8 +140,10 @@
     .result.red { background: linear-gradient(135deg, #bd2525, #791313); }
 
     .result-content {
-      display: block;
-      padding: 7px 13px 8px;
+      display: flex;
+      flex-direction: column;
+      min-height: 120px;
+      padding: 11px 13px 12px;
     }
 
     .result.hidden .header-line,
@@ -151,17 +153,15 @@
 
     .cover {
       display: none;
+      margin: auto 0;
       font-size: 16px;
       font-weight: 900;
       letter-spacing: .12em;
       opacity: .95;
-    }
-
-    .result.hidden .cover {
-      display: block;
-      padding: 6px 0 5px;
       text-align: center;
     }
+
+    .result.hidden .cover { display: block; }
 
     .header-line {
       display: flex;
@@ -186,9 +186,9 @@
 
     .value {
       display: block;
+      margin-top: 14px;
       font-size: 22px;
       font-weight: 900;
-      margin-top: 3px;
       line-height: 1.15;
     }
 
