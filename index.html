@@ -8,8 +8,8 @@
   <style>
     :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
     * { box-sizing: border-box; }
-    body { margin: 0; background: #f2f4f7; color: #17202a; }
-    main { max-width: 680px; margin: 0 auto; padding: 20px 16px 32px; }
+    body { margin: 0; background: #f2f4f7; color: #17202a; overflow-x: hidden; }
+    main { max-width: 680px; margin: 0 auto; padding: 20px 16px 32px; overflow-x: clip; }
     h1 { margin: 0 0 18px; font-size: 28px; }
     h2 { font-size: 19px; margin: 25px 0 10px; }
     .panel { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 10px #00000012; }
@@ -31,10 +31,10 @@
     .reset-button { background: #59636e; }
     .status { margin-top: 12px; color: #4d5965; text-align: center; min-height: 22px; }
     .warning { color: #8b1e1e; background: #fff0f0; border-radius: 10px; padding: 10px; margin-top: 12px; text-align: center; }
-    .groups { display: grid; gap: 16px; }
+    .groups { display: grid; gap: 16px; padding: 0 5px; overflow: hidden; }
     .group { display: grid; gap: 8px; }
     .group-title { margin: 0; font-size: 14px; font-weight: 800; letter-spacing: .06em; color: #58636f; }
-    .result { width: 100%; appearance: none; -webkit-appearance: none; display: block; margin: 0; border: 0; outline: 0; border-radius: 11px; padding: 0; color: white; font: inherit; line-height: normal; text-align: left; cursor: pointer; overflow: hidden; box-shadow: 0 1px 5px #0000001c; transition: transform 170ms ease, filter 170ms ease; touch-action: manipulation; }
+    .result { width: 100%; appearance: none; -webkit-appearance: none; display: block; margin: 0; border: 0; outline: 0; border-radius: 11px; padding: 0; color: white; font: inherit; line-height: normal; text-align: left; cursor: pointer; overflow: hidden; box-shadow: 0 1px 5px #0000001c; transform-origin: center center; will-change: transform; transition: transform 170ms ease, filter 170ms ease; touch-action: manipulation; }
     .result:active { transform: scale(.985); }
     .result.blue { background: linear-gradient(135deg, #1769aa, #0d3f76); }
     .result.red { background: linear-gradient(135deg, #bd2525, #791313); }
@@ -48,11 +48,11 @@
     .value { display: block; margin-top: 14px; font-size: 22px; font-weight: 900; line-height: 1.15; }
     .empty { color: #68737e; text-align: center; padding: 24px 8px; }
     .flip { animation: flip-in 340ms ease-out both; }
-    @keyframes flip-in { 0% { transform: perspective(500px) rotateX(-88deg); filter: brightness(.7); opacity: .55; } 60% { transform: perspective(500px) rotateX(8deg); } 100% { transform: perspective(500px) rotateX(0); filter: brightness(1); opacity: 1; } }
+    @keyframes flip-in { 0% { transform: perspective(500px) rotateX(-88deg) scaleX(.96); filter: brightness(.7); opacity: .55; } 60% { transform: perspective(500px) rotateX(8deg) scaleX(.99); } 100% { transform: perspective(500px) rotateX(0) scaleX(1); filter: brightness(1); opacity: 1; } }
     @media (max-width: 360px) { .damage-selectors { grid-template-columns: 1fr; gap: 12px; } }
     @media (max-width: 340px) { .actions { grid-template-columns: 1fr; } }
     @media (prefers-reduced-motion: reduce) { .flip { animation: none; } .result { transition: none; } }
-    @media (max-width: 390px) { main { padding: 16px 12px 28px; } h1 { font-size: 25px; } }
+    @media (max-width: 390px) { main { padding: 16px 12px 28px; } h1 { font-size: 25px; } .groups { padding: 0 4px; } }
   </style>
 </head>
 <body>
@@ -106,97 +106,22 @@
     let available = new Set(sets[selectedSet].chits.map(chit => chit[0]));
     let results = [];
     const $ = id => document.getElementById(id);
-
     function currentChits() { return sets[selectedSet].chits; }
-    function drawRandom(array, count) {
-      const copy = [...array];
-      for (let i = copy.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-      }
-      return copy.slice(0, count);
-    }
-    function escapeHTML(value) {
-      return String(value).replace(/[&<>"']/g, character => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-      }[character]));
-    }
+    function drawRandom(array, count) { const copy = [...array]; for (let i = copy.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [copy[i], copy[j]] = [copy[j], copy[i]]; } return copy.slice(0, count); }
+    function escapeHTML(value) { return String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character])); }
     function readCount(inputId) { return Math.max(0, Math.min(36, Number.parseInt($(inputId).value, 10) || 0)); }
     function setCount(inputId, value) { $(inputId).value = value <= 0 ? '' : String(Math.max(0, Math.min(36, value))); }
     function changeCount(inputId, delta) { setCount(inputId, readCount(inputId) + delta); }
-
-    function card(result, index) {
-      const label = result.side === 'blue' ? 'BLUE' : 'RED';
-      const hiddenClass = result.revealed ? '' : 'hidden';
-      const ariaLabel = result.revealed ? `Tessera ${result.id} ${label}` : `Scopri tessera ${label}`;
-      return `<button class="result ${result.side} ${hiddenClass}" type="button" data-index="${index}" aria-label="${ariaLabel}"><span class="result-content"><span class="cover">TOCCA PER SCOPRIRE</span><span class="header-line"><span class="side">${label}</span><span class="id">Tessera ${result.id}</span></span><span class="value">${escapeHTML(result.value)}</span></span></button>`;
-    }
-    function showResults() {
-      const container = $('results');
-      if (!results.length) {
-        container.innerHTML = '<div class="panel empty">Nessuna tessera estratta.</div>';
-        return;
-      }
-      const red = results.map((result, index) => ({ result, index })).filter(item => item.result.side === 'red');
-      const blue = results.map((result, index) => ({ result, index })).filter(item => item.result.side === 'blue');
-      container.innerHTML = `${red.length ? `<div class="group"><h3 class="group-title">RED</h3>${red.map(item => card(item.result, item.index)).join('')}</div>` : ''}${blue.length ? `<div class="group"><h3 class="group-title">BLUE</h3>${blue.map(item => card(item.result, item.index)).join('')}</div>` : ''}`;
-    }
+    function card(result, index) { const label = result.side === 'blue' ? 'BLUE' : 'RED'; const hiddenClass = result.revealed ? '' : 'hidden'; const ariaLabel = result.revealed ? `Tessera ${result.id} ${label}` : `Scopri tessera ${label}`; return `<button class="result ${result.side} ${hiddenClass}" type="button" data-index="${index}" aria-label="${ariaLabel}"><span class="result-content"><span class="cover">TOCCA PER SCOPRIRE</span><span class="header-line"><span class="side">${label}</span><span class="id">Tessera ${result.id}</span></span><span class="value">${escapeHTML(result.value)}</span></span></button>`; }
+    function showResults() { const container = $('results'); if (!results.length) { container.innerHTML = '<div class="panel empty">Nessuna tessera estratta.</div>'; return; } const red = results.map((result,index) => ({result,index})).filter(item => item.result.side === 'red'); const blue = results.map((result,index) => ({result,index})).filter(item => item.result.side === 'blue'); container.innerHTML = `${red.length ? `<div class="group"><h3 class="group-title">RED</h3>${red.map(item => card(item.result,item.index)).join('')}</div>` : ''}${blue.length ? `<div class="group"><h3 class="group-title">BLUE</h3>${blue.map(item => card(item.result,item.index)).join('')}</div>` : ''}`; }
     function message(text, warning = false) { $('status').innerHTML = warning ? `<div class="warning">${escapeHTML(text)}</div>` : escapeHTML(text); }
-    function resetBag() {
-      available = new Set(currentChits().map(chit => chit[0]));
-      results = [];
-      setCount('blueCount', 0);
-      setCount('redCount', 0);
-      showResults();
-    }
-
-    document.querySelectorAll('.step-button').forEach(button => {
-      button.addEventListener('click', () => changeCount(button.dataset.target, Number(button.dataset.delta)));
-    });
-    ['redCount', 'blueCount'].forEach(inputId => {
-      $(inputId).addEventListener('change', () => setCount(inputId, readCount(inputId)));
-    });
-    $('results').addEventListener('click', event => {
-      const cardElement = event.target.closest('.result.hidden');
-      if (!cardElement) return;
-      const index = Number(cardElement.dataset.index);
-      results[index].revealed = true;
-      cardElement.classList.remove('hidden');
-      cardElement.classList.add('flip');
-      cardElement.setAttribute('aria-label', `Tessera ${results[index].id} ${results[index].side.toUpperCase()}`);
-    });
-    $('setSelect').addEventListener('change', () => {
-      if (results.length && !window.confirm('Cambiare set cancella le estrazioni del turno. Continuare?')) {
-        $('setSelect').value = selectedSet;
-        return;
-      }
-      selectedSet = $('setSelect').value;
-      resetBag();
-      message('');
-    });
-    $('draw').addEventListener('click', () => {
-      const blueCount = readCount('blueCount');
-      const redCount = readCount('redCount');
-      const total = blueCount + redCount;
-      if (total === 0) return message('Inserisci almeno una tessera da estrarre.', true);
-      if (total > 36) return message(`Non puoi estrarre ${total} tessere: il set contiene soltanto 36 tessere.`, true);
-      if (total > available.size) return message(`Non puoi estrarre ${total} tessere: in questo turno ne restano soltanto ${available.size}. Reset per reimbussolare.`, true);
-      const ids = drawRandom([...available], total);
-      const chits = currentChits();
-      const redIDs = ids.slice(0, redCount);
-      const blueIDs = ids.slice(redCount);
-      results.push(
-        ...redIDs.map(id => ({ id, side: 'red', value: chits[id - 1][2], revealed: false })),
-        ...blueIDs.map(id => ({ id, side: 'blue', value: chits[id - 1][1], revealed: false }))
-      );
-      ids.forEach(id => available.delete(id));
-      message(`${total} tessere estratte dal set ${sets[selectedSet].name}. Tocca ciascuna tessera per scoprirla.`);
-      showResults();
-    });
-    $('reset').addEventListener('click', () => {
-      resetBag();
-      message(`Tutte le 36 tessere del set ${sets[selectedSet].name} sono state reimbussolate.`);
-    });
+    function resetBag() { available = new Set(currentChits().map(chit => chit[0])); results = []; setCount('blueCount',0); setCount('redCount',0); showResults(); }
+    document.querySelectorAll('.step-button').forEach(button => button.addEventListener('click', () => changeCount(button.dataset.target, Number(button.dataset.delta))));
+    ['redCount','blueCount'].forEach(inputId => $(inputId).addEventListener('change', () => setCount(inputId, readCount(inputId))));
+    $('results').addEventListener('click', event => { const cardElement = event.target.closest('.result.hidden'); if (!cardElement) return; const index = Number(cardElement.dataset.index); results[index].revealed = true; cardElement.classList.remove('hidden'); cardElement.classList.add('flip'); cardElement.setAttribute('aria-label', `Tessera ${results[index].id} ${results[index].side.toUpperCase()}`); });
+    $('setSelect').addEventListener('change', () => { if (results.length && !window.confirm('Cambiare set cancella le estrazioni del turno. Continuare?')) { $('setSelect').value = selectedSet; return; } selectedSet = $('setSelect').value; resetBag(); message(''); });
+    $('draw').addEventListener('click', () => { const blueCount = readCount('blueCount'); const redCount = readCount('redCount'); const total = blueCount + redCount; if (total === 0) return message('Inserisci almeno una tessera da estrarre.', true); if (total > 36) return message(`Non puoi estrarre ${total} tessere: il set contiene soltanto 36 tessere.`, true); if (total > available.size) return message(`Non puoi estrarre ${total} tessere: in questo turno ne restano soltanto ${available.size}. Reset per reimbussolare.`, true); const ids = drawRandom([...available], total); const chits = currentChits(); const redIDs = ids.slice(0, redCount); const blueIDs = ids.slice(redCount); results.push(...redIDs.map(id => ({id,side:'red',value:chits[id-1][2],revealed:false})), ...blueIDs.map(id => ({id,side:'blue',value:chits[id-1][1],revealed:false}))); ids.forEach(id => available.delete(id)); message(`${total} tessere estratte dal set ${sets[selectedSet].name}. Tocca ciascuna tessera per scoprirla.`); showResults(); });
+    $('reset').addEventListener('click', () => { resetBag(); message(`Tutte le 36 tessere del set ${sets[selectedSet].name} sono state reimbussolate.`); });
   </script>
 </body>
 </html>
